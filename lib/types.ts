@@ -21,7 +21,6 @@ export type RectangleLayer = {
   y: number;
   height: number;
   width: number;
-  fill: Color;
   value?: string;
 };
 
@@ -71,7 +70,7 @@ export type CanvasState =
     }
   | {
       mode: CanvasMode.Inserting;
-      layerType: LayerType.Rectangle;
+      layerType: LayerType.Rectangle | LayerType.Image;
     }
   | {
       mode: CanvasMode.Resizing;

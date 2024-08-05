@@ -13,7 +13,7 @@ export const Rectangle = ({
   onPointerDown,
   selectionColor,
 }: RectangleProps) => {
-  const { x, y, width, height, fill } = layer;
+  const { x, y, width, height } = layer;
   return (
     <rect
       className="drop-shadow-md"
@@ -27,7 +27,7 @@ export const Rectangle = ({
       height={height}
       strokeWidth={1}
       fill="transparent"
-      stroke={selectionColor || "transparent"}
+      stroke={selectionColor || "black"}
     />
   );
 };
