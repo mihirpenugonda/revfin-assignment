@@ -10,14 +10,12 @@ export type Camera = {
 };
 
 export enum LayerType {
-  Text,
-  Note,
   Rectangle,
-  Ellipse,
-  Path,
+  Image,
 }
 
 export type RectangleLayer = {
+  id: string;
   type: LayerType.Rectangle;
   x: number;
   y: number;
@@ -25,6 +23,14 @@ export type RectangleLayer = {
   width: number;
   fill: Color;
   value?: string;
+};
+
+export type ImageLayer = {
+  id: string;
+  type: LayerType.Image;
+  x: number;
+  y: number;
+  image: string;
 };
 
 export type Point = {
@@ -83,4 +89,4 @@ export enum CanvasMode {
   Pencil,
 }
 
-export type Layer = RectangleLayer;
+export type Layer = RectangleLayer | ImageLayer;
