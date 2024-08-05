@@ -15,6 +15,7 @@ export const Image = ({ id, layer }: ImageProps) => {
       y={0}
       style={{
         transform: `translate(${x}px, ${y}px)`,
+        transformOrigin: "0 0",
       }}
       xlinkHref={image}
     />

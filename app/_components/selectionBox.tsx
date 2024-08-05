@@ -20,8 +20,6 @@ export const SelectionBox = memo(
 
     const bounds = useSelectionBounds(layers, selectedLayerId);
 
-    console.log(bounds)
-
     if (!bounds) return null;
 
     return (

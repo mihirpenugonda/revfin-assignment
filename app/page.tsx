@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { createContext } from "react";
 import {
   Camera,
@@ -33,19 +33,65 @@ export const CanvasContext = createContext<CanvasContextType>({
 });
 
 export default function Home() {
-  const [camera, setCamera] = useState({ x: 0, y: 0 });
+  const [camera, setCamera] = useState({
+    x: screen.width / 2,
+    y: 0,
+    scale: 0.5,
+  });
   const [canvasState, setCanvasState] = useState<CanvasState>({
     mode: CanvasMode.None,
   });
   const [layerDetails, setLayerDetails] = useState<Layer[]>([]);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    setCamera((camera) => ({
-      x: camera.x - e.deltaX,
-      y: camera.y - e.deltaY,
-    }));
-  }, []);
+  const containerRef = useRef<any>(null);
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isDragging) return;
+
+      setCamera((prev) => ({
+        ...prev,
+        x: prev.x + (e.clientX - dragStart.x) / prev.scale,
+        y: prev.y + (e.clientY - dragStart.y) / prev.scale,
+      }));
+
+      setDragStart({ x: e.clientX, y: e.clientY });
+    },
+    [isDragging, dragStart]
+  );
+
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault();
+      const scaleFactor = 1 - e.deltaY * 0.001;
+      const newScale = Math.max(0.1, Math.min(10, camera.scale * scaleFactor));
+
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const mouseX = (e.clientX - rect.left) / camera.scale - camera.x;
+      const mouseY = (e.clientY - rect.top) / camera.scale - camera.y;
+
+      setCamera((prev) => ({
+        scale: newScale,
+        x: mouseX - (mouseX - prev.x) * (newScale / prev.scale),
+        y: mouseY - (mouseY - prev.y) * (newScale / prev.scale),
+      }));
+    },
+    [camera]
+  );
 
   const insertLayer = useCallback(
     (
@@ -88,6 +134,8 @@ export default function Home() {
 
       setLayerDetails((prevLayers) =>
         prevLayers.map((layer) => {
+          console.log(layer);
+
           if (layer.id === selectedLayerId) {
             return {
               ...layer,
@@ -144,8 +192,8 @@ export default function Home() {
       const layer: Layer = {
         id: layerId.toString(),
         type: LayerType.Image,
-        x: 0,
-        y: 0,
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
         image: imgSrc,
       };
 
@@ -246,22 +294,18 @@ export default function Home() {
         />
 
         <svg
+          ref={containerRef}
           className="h-[100vh] w-[100vw]"
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
+          onMouseMove={handleMouseMove}
           onWheel={handleWheel}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerDown={handlePointerDown}
         >
           <g
             style={{
               transform: `translate(${camera.x}px, ${camera.y}px)`,
             }}
           >
-            <SelectionBox
-              layers={layerDetails}
-              onResizeHandlePointerDown={handleResizeHandlePointerDown}
-            />
-
             {layerDetails.map((layer) => (
               <LayerPreview
                 key={layer.id}
@@ -269,6 +313,11 @@ export default function Home() {
                 onLayerPointerDown={handleLayerPointerDown}
               />
             ))}
+
+            <SelectionBox
+              layers={layerDetails}
+              onResizeHandlePointerDown={handleResizeHandlePointerDown}
+            />
           </g>
         </svg>
       </main>
