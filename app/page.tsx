@@ -192,11 +192,17 @@ export default function Home() {
       const layer: Layer = {
         id: layerId.toString(),
         type: LayerType.Image,
-        x: window.innerWidth / 2,
-        y: window.innerHeight / 2,
+        x: 0,
+        y: 0,
         image: imgSrc,
       };
 
+
+      setCamera((prev) => ({
+        x: window.screen.width / 2,
+        y: 0,
+        scale: 0.5,
+      }));
       setLayerDetails((layerDetails) => [...layerDetails, layer]);
     },
     [camera]
@@ -286,24 +292,29 @@ export default function Home() {
     <CanvasContext.Provider
       value={{ camera, layerDetails, selectedLayerId, setSelectedLayerId }}
     >
-      <main className="h-full w-full relative bg-neutral-100 touch-none">
+      <main className="h-screen w-full relative overflow-hidden bg-neutral-100 touch-none">
         <Toolbar
           canvasState={canvasState}
           setCanvasState={setCanvasState}
           handleImageInsert={handleImageInsert}
         />
 
-        <svg
+        <div
           ref={containerRef}
-          className="h-[100vh] w-[100vw]"
+          className="absolute h-full w-full"
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
           onMouseMove={handleMouseMove}
           onWheel={handleWheel}
+          onPointerUp={handlePointerUp}
+          onPointerDown={handlePointerDown}
         >
-          <g
+          <div
             style={{
-              transform: `translate(${camera.x}px, ${camera.y}px)`,
+              transform: `translate(${camera.x * camera.scale}px, ${
+                camera.y * camera.scale
+              }px) scale(${camera.scale})`,
+              transformOrigin: "0 0",
             }}
           >
             {layerDetails.map((layer) => (
@@ -318,8 +329,8 @@ export default function Home() {
               layers={layerDetails}
               onResizeHandlePointerDown={handleResizeHandlePointerDown}
             />
-          </g>
-        </svg>
+          </div>
+        </div>
       </main>
     </CanvasContext.Provider>
   );

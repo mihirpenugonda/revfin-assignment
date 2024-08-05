@@ -4,7 +4,7 @@ import { LayerType } from "@/lib/types";
 import { memo, useContext } from "react";
 import { CanvasContext } from "../page";
 import { Rectangle } from "./rectangle";
-import { Image } from "./image";
+import { ImageElement } from "./image";
 
 interface LayerPreviewProps {
   id: string;
@@ -27,7 +27,7 @@ export const LayerPreview = memo(
         );
 
       case LayerType.Image:
-        return <Image id={id} layer={layer} />;
+        return <ImageElement id={id} layer={layer} />;
 
       default:
         console.warn("Unknown layer type", layer);
