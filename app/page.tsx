@@ -2,20 +2,34 @@
 
 import { useCallback, useState } from "react";
 import { createContext } from "react";
-import { Camera, CanvasState, CanvasMode, LayerType, Layer } from "@/lib/types";
+import {
+  Camera,
+  CanvasState,
+  CanvasMode,
+  LayerType,
+  Layer,
+  Side,
+  XYWH,
+  Point,
+} from "@/lib/types";
 import { LayerPreview } from "./_components/layerPreview";
-import { pointerEventToCanvasPoint } from "@/lib/utils";
+import { pointerEventToCanvasPoint, resizeBounds } from "@/lib/utils";
 import { Toolbar } from "./_components/toolbar";
 import { v4 as uuidv4 } from "uuid";
+import { SelectionBox } from "./_components/selectionBox";
 
 interface CanvasContextType {
   camera: Camera;
   layerDetails: Layer[];
+  selectedLayerId: string | null;
+  setSelectedLayerId: (id: string | null) => void;
 }
 
 export const CanvasContext = createContext<CanvasContextType>({
   camera: { x: 0, y: 0 },
   layerDetails: [],
+  selectedLayerId: null,
+  setSelectedLayerId: () => {},
 });
 
 export default function Home() {
@@ -24,6 +38,7 @@ export default function Home() {
     mode: CanvasMode.None,
   });
   const [layerDetails, setLayerDetails] = useState<Layer[]>([]);
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     setCamera((camera) => ({
@@ -62,6 +77,66 @@ export default function Home() {
     []
   );
 
+  const translateSelectedLayer = useCallback(
+    (point: Point) => {
+      if (canvasState.mode !== CanvasMode.Translating) return;
+
+      const offset = {
+        x: point.x - canvasState.current.x,
+        y: point.y - canvasState.current.y,
+      };
+
+      setLayerDetails((prevLayers) =>
+        prevLayers.map((layer) => {
+          if (layer.id === selectedLayerId) {
+            return {
+              ...layer,
+              x: layer.x + offset.x,
+              y: layer.y + offset.y,
+            };
+          }
+          return layer;
+        })
+      );
+
+      setCanvasState({
+        mode: CanvasMode.Translating,
+        current: point,
+      });
+    },
+    [canvasState, selectedLayerId]
+  );
+
+  const resizeSelectedLayer = useCallback(
+    (point: Point) => {
+      if (canvasState.mode !== CanvasMode.Resizing) {
+        return;
+      }
+
+      const bounds = resizeBounds(
+        canvasState.initialBounds,
+        canvasState.corner,
+        point
+      );
+
+      setLayerDetails((prevLayers) =>
+        prevLayers.map((layer) => {
+          if (layer.id === selectedLayerId) {
+            return {
+              ...layer,
+              x: bounds.x,
+              y: bounds.y,
+              width: bounds.width,
+              height: bounds.height,
+            };
+          }
+          return layer;
+        })
+      );
+    },
+    [canvasState]
+  );
+
   const handleImageInsert = useCallback(
     (imgSrc: string) => {
       const layerId = uuidv4();
@@ -89,9 +164,20 @@ export default function Home() {
 
       const point = pointerEventToCanvasPoint(e, camera);
 
-      if (canvasState.mode == CanvasMode.Translating) {
+      if (
+        canvasState.mode === CanvasMode.None ||
+        canvasState.mode === CanvasMode.Pressing
+      ) {
+        unselectLayer();
+        setCanvasState({
+          mode: CanvasMode.None,
+        });
+      } else if (canvasState.mode == CanvasMode.Translating) {
+        translateSelectedLayer(point);
       } else if (canvasState.mode == CanvasMode.Inserting) {
         insertLayer(canvasState.layerType, point);
+      } else if (canvasState.mode == CanvasMode.Resizing) {
+        resizeSelectedLayer(point);
       }
     },
     [canvasState]
@@ -121,6 +207,10 @@ export default function Home() {
 
       const point = pointerEventToCanvasPoint(e, camera);
 
+      setSelectedLayerId(layerId);
+
+      console.log(selectedLayerId, "selectedLayerId");
+
       setCanvasState({
         mode: CanvasMode.Translating,
         current: point,
@@ -129,8 +219,25 @@ export default function Home() {
     [canvasState.mode, camera, setCanvasState]
   );
 
+  const handleResizeHandlePointerDown = useCallback(
+    (corner: Side, initialBounds: XYWH) => {
+      setCanvasState({
+        mode: CanvasMode.Resizing,
+        initialBounds,
+        corner,
+      });
+    },
+    [history]
+  );
+
+  const unselectLayer = useCallback(() => {
+    setSelectedLayerId(null);
+  }, [setSelectedLayerId]);
+
   return (
-    <CanvasContext.Provider value={{ camera, layerDetails }}>
+    <CanvasContext.Provider
+      value={{ camera, layerDetails, selectedLayerId, setSelectedLayerId }}
+    >
       <main className="h-full w-full relative bg-neutral-100 touch-none">
         <Toolbar
           canvasState={canvasState}
@@ -150,6 +257,11 @@ export default function Home() {
               transform: `translate(${camera.x}px, ${camera.y}px)`,
             }}
           >
+            <SelectionBox
+              layers={layerDetails}
+              onResizeHandlePointerDown={handleResizeHandlePointerDown}
+            />
+
             {layerDetails.map((layer) => (
               <LayerPreview
                 key={layer.id}
