@@ -1,10 +1,10 @@
 "use client";
 
-import { pointerEventToCanvasPoint } from "@/lib/utils";
 import { useCallback, useState } from "react";
 import { createContext } from "react";
 import { Camera, CanvasState, CanvasMode, LayerType, Layer } from "@/lib/types";
 import { LayerPreview } from "./_components/layerPreview";
+import { pointerEventToCanvasPoint } from "@/lib/utils";
 
 interface CanvasContextType {
   camera: Camera;
